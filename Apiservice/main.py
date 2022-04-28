@@ -6,6 +6,7 @@ Run a Flask REST API exposing a YOLOv5s model
 import argparse
 import base64
 import io
+import json
 
 import torch
 import uvicorn
@@ -36,10 +37,10 @@ async def image_process(data: bytes = Depends(parse_body)):
 	results = model(image)
 	tdict = {}
 	i = 1
-	for img in results.imgs:
-		# tdict['spec']=img
-		print(results)
-		print(img)
+
+	detect_res = results.pandas().xyxy[0].to_json(orient="records")
+	detect_res = json.loads(detect_res)
+	tdict['spec'] = detect_res
 
 	results.render()
 

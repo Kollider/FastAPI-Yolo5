@@ -32,6 +32,17 @@ img_bio = io.BytesIO(img_base64)
 
 img = Image.open(img_bio)
 img_shape = img.size
-#print(type(response['spec']))
+counter = 0
+
+special_info = response['spec']
+for bound_box_dict in special_info:
+	counter += 1
+	for key, value in bound_box_dict.items():
+		print(key, value)
 
 # pprint.pprint(response)
+
+import pandas as pd
+
+df = pd.DataFrame.from_dict(special_info)
+df.to_csv(r'bound_boxes.csv', index=False, header=True)
