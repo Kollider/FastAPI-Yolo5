@@ -1,15 +1,10 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
-"""
-Run a Flask REST API exposing a YOLOv5s model
-"""
-
 import argparse
 import base64
 import io
 import json
-
 import torch
 import uvicorn
+
 from fastapi import FastAPI, Depends, Request
 from PIL import Image
 
@@ -18,42 +13,41 @@ app = FastAPI()
 DETECTION_URL = "/upload"
 
 
+# convert image to bytes
+def image_to_byte_array(in_image: Image) -> bytes:
+	imgByteArr = io.BytesIO()
+	in_image.save(imgByteArr, format=in_image.format)
+	byteIm = imgByteArr.getvalue()  # image in bytes
+	return byteIm
+
+
+# get image bytes from request
 async def parse_body(request: Request):
 	data: bytes = await request.body()
 	return data
 
 
-def image_to_byte_array(in_image: Image) -> bytes:
-	imgByteArr = io.BytesIO()
-	in_image.save(imgByteArr, format=in_image.format)
-	byteIm = imgByteArr.getvalue()
-	return byteIm
-
-
 @app.post(DETECTION_URL)
-async def image_process(data: bytes = Depends(parse_body)):
-	image_bytes = data
+async def image_process(image_bytes: bytes = Depends(parse_body)):
 	image = Image.open(io.BytesIO(image_bytes))
 	results = model(image)
-	tdict = {}
-	i = 1
 
-	detect_res = results.pandas().xyxy[0].to_json(orient="records")
-	detect_res = json.loads(detect_res)
-	tdict['spec'] = detect_res
+	detect_res = results.pandas().xyxy[0].to_json(orient="records")  # bound box info to json format using pandas
+	detect_res_json = json.loads(detect_res)
+
+	response_dict = {
+		'bound_box_info': detect_res_json
+	}
 
 	results.render()
 
-	for img in results.imgs:
-		buffered = io.BytesIO()
-		img_base64 = Image.fromarray(img)
-		img_base64.save(buffered, format="JPEG")
-		img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')  # base64 encoded image with results
-		tdict[f'{i}'] = img_str
-	# bla = image_to_byte_array(Image.open('runs/de'))
-	# tdict['additional']=results.pandas().xyxy[0].to_json(orient="records")
+	imgByteArr = io.BytesIO()
+	img_base64 = Image.fromarray(results.imgs[0])  # Get Pillow image
+	img_base64.save(imgByteArr, format="JPEG")
+	img_str = base64.b64encode(imgByteArr.getvalue()).decode('utf-8')  # base64 encoded image with results
+	response_dict['image'] = img_str  # write image to response
 
-	return tdict  # results.pandas().xyxy[0].to_json(orient="records")
+	return response_dict
 
 
 if __name__ == '__main__':

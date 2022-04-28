@@ -1,13 +1,10 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
-"""
-Perform test request
-"""
 import base64
 import io
-import pprint
-
 import requests
+
 from PIL import Image
+
+import pandas as pd
 
 DETECTION_URL = "http://127.0.0.1:8000/upload/"
 IMAGE = Image.open('images/zidane.jpg')
@@ -20,29 +17,17 @@ def image_to_byte_array(in_image: Image) -> bytes:
 	return byteIm
 
 
-bla = image_to_byte_array(IMAGE)
+img_bytes = image_to_byte_array(IMAGE)  # convert image to bytes
+response = requests.post(DETECTION_URL, data=img_bytes).json()  # send image to detect
 
-# Read image
+img_str = response['image']  # get image in base64 string format after detecting
+img_base64 = base64.b64decode(img_str)  # convert base64 string to bytes
+img_bio = io.BytesIO(img_base64)  # Convert to BytesIO to be handled by Pillow
 
+img = Image.open(img_bio)  # Open with Pilllow
+img.save('output.png', format='png')  # save image with bounding boxes
 
-response = requests.post(DETECTION_URL, data=bla).json()
-img_str = response['1']
-img_base64 = base64.b64decode(img_str)
-img_bio = io.BytesIO(img_base64)
+special_info = response['bound_box_info']  # information about bounding boxes
 
-img = Image.open(img_bio)
-img_shape = img.size
-counter = 0
-
-special_info = response['spec']
-for bound_box_dict in special_info:
-	counter += 1
-	for key, value in bound_box_dict.items():
-		print(key, value)
-
-# pprint.pprint(response)
-
-import pandas as pd
-
-df = pd.DataFrame.from_dict(special_info)
-df.to_csv(r'bound_boxes.csv', index=False, header=True)
+df = pd.DataFrame.from_dict(special_info)  # create dataframe from dictionary
+df.to_csv(r'bound_boxes.csv', index=False, header=True)  # write to csv
