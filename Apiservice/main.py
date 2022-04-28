@@ -8,6 +8,8 @@ import uvicorn
 from fastapi import FastAPI, Depends, Request
 from PIL import Image
 
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, force_reload=False)
+
 app = FastAPI()
 
 DETECTION_URL = "/upload"
@@ -50,13 +52,13 @@ async def image_process(image_bytes: bytes = Depends(parse_body)):
 	return response_dict
 
 
-if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description="Flask API exposing YOLOv5 model")
-	parser.add_argument("--port", default=8000, type=int, help="port number")
-	opt = parser.parse_args()
-
-	# Fix known issue urllib.error.HTTPError 403: rate limit exceeded https://github.com/ultralytics/yolov5/pull/7210
-	torch.hub._validate_not_a_forked_repo = lambda a, b, c: True
-
-	model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, force_reload=False)
-	uvicorn.run(app, host="127.0.0.1", port=opt.port)  # debug=True causes Restarting with stat
+# if __name__ == '__main__':
+# 	parser = argparse.ArgumentParser()
+# 	parser.add_argument("--port", default=8000, type=int, help="port number")
+# 	opt = parser.parse_args()
+#
+# 	# Fix known issue urllib.error.HTTPError 403: rate limit exceeded https://github.com/ultralytics/yolov5/pull/7210
+# 	torch.hub._validate_not_a_forked_repo = lambda a, b, c: True
+#
+#
+# 	uvicorn.run(app, host="127.0.0.1", port=opt.port)  # debug=True causes Restarting with stat
